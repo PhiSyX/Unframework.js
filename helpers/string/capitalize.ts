@@ -8,7 +8,7 @@ type Options = {
 	/// Inclure les séparateurs dans le résultat?
 	includes_separators?: boolean;
 	/// Exclure le premier caractère?
-	excludes_first_chars?: boolean;
+	excludes_first_char?: boolean;
 };
 
 // -------- //
@@ -21,7 +21,7 @@ const EXCLUDE_SEPARATOR: RegExp = /[\s-_]+/;
 const Default: Options = {
 	to_lower: true,
 	includes_separators: true,
-	excludes_first_chars: false,
+	excludes_first_char: false,
 };
 
 // -------- //
@@ -30,10 +30,12 @@ const Default: Options = {
 
 /// Remplace tous les premiers caractères des mots d'une chaîne de caractères
 /// |text| par une majuscule.
-function capitalize(text: string, user_options: Options = Default): string {
+function capitalize(text: string, user_options: Options = Default): string
+{
 	let options: Options = { ...Default, ...user_options };
 
-	const algo = (word: string) => {
+	const algo = (word: string) =>
+	{
 		if (word.length === 0) {
 			return word;
 		}
@@ -42,7 +44,7 @@ function capitalize(text: string, user_options: Options = Default): string {
 		// caractères comporte au moins 1 caractère, qui nous permet d'accéder à
 		// l'index 0 de la chaîne en toute sécurité.
 		let first_ch: string[number] /* char */;
-		if (options.excludes_first_chars) {
+		if (options.excludes_first_char) {
 			first_ch = word[0];
 		} else {
 			first_ch = word[0].toUpperCase();

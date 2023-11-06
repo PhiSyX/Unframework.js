@@ -10,6 +10,8 @@ interface CustomElementConstructor<Instance extends CustomElementInterface>
 	new (_: GlobalCustomElement): Instance;
 
 	dyn_attributes?: Array<string>;
+	events?: Array<string>;
+	TAG_NAME?: string;
 }
 
 interface CustomElementInterface

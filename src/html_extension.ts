@@ -34,7 +34,7 @@ namespace HTMLExtension {
 		style: HTMLStyle;
 	}>;
 
-	export type Attr = HTMLExtension | HTMLObject | Primitive | Signal;
+	export type Attr = HTMLExtension | HTMLElement | HTMLObject | Primitive | Signal;
 
 	export type Args = Array<Attr>;
 
@@ -56,11 +56,23 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	>(
 		tag_name: TagName,
 		args: HTMLExtension.Args
-	): HTMLExtension<NativeHTMLElement> {
+	): HTMLExtension<NativeHTMLElement>
+	{
 		let $native_html_element = document.createElement(
 			tag_name
 		) as NativeHTMLElement;
 		return new HTMLExtension($native_html_element, args);
+	}
+
+	public static createFragment(
+		extensions: Array<HTMLExtension>,
+	): HTMLExtension
+	{
+		let $native_fragment = document.createDocumentFragment() as unknown as HTMLElement;
+		extensions.forEach((extension) => {
+			$native_fragment.append(extension.$native_element);
+		});
+		return new HTMLExtension($native_fragment, []);
 	}
 
 	/**
@@ -68,12 +80,16 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	 */
 	public $native_element!: NativeHTMLElement;
 	public args: HTMLExtension.Args = [];
+	// Children (CE = Custom Element).
+	children_CE: Array<HTMLElement> = [];
+	events: Array<string> = [];
 
 	constructor(
-		$native_html_element: NativeHTMLElement,
+		$native_element: NativeHTMLElement,
 		args: HTMLExtension.Args
-	) {
-		this.$native_element = $native_html_element;
+	)
+	{
+		this.$native_element = $native_element;
 
 		for (let arg of args) {
 			if (is_signal(arg)) {
@@ -83,6 +99,11 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 
 			if (is_extension(arg)) {
 				this.handle_extension(arg);
+				continue;
+			}
+
+			if (arg instanceof HTMLElement) {
+				this.handle_element(arg);
 				continue;
 			}
 
@@ -100,11 +121,19 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		this.args = args;
 	}
 
-	handle_extension(arg: HTMLExtension) {
+	handle_element(arg: HTMLElement)
+	{
+		this.children_CE.push(arg);
+		this.$native_element.append(arg);
+	}
+
+	handle_extension(arg: HTMLExtension)
+	{
 		this.$native_element.append(arg.$native_element);
 	}
 
-	handle_object(arg: HTMLExtension.HTMLObject) {
+	handle_object(arg: HTMLExtension.HTMLObject)
+	{
 		let entries = Object.entries(arg);
 
 		for (let entry of entries) {
@@ -184,7 +213,8 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		this.$native_element.append(element);
 	}
 
-	handle_object_style(style_obj: HTMLExtension.HTMLStyle) {
+	handle_object_style(style_obj: HTMLExtension.HTMLStyle)
+	{
 		for (let [property, value] of Object.entries(style_obj)) {
 			if (value instanceof Computed) {
 				value.watch((data) => {
@@ -202,7 +232,8 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		}
 	}
 
-	handle_primitive(arg: HTMLExtension.Primitive) {
+	handle_primitive(arg: HTMLExtension.Primitive)
+	{
 		let text = arg.toString();
 		if (
 			text.startsWith("&") &&
@@ -218,7 +249,8 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		}
 	}
 
-	handle_signal(arg: Signal) {
+	handle_signal(arg: Signal)
+	{
 		if (is_primitive(arg.value)) {
 			arg.trigger_elements.push(
 				document.createTextNode(arg.value.toString())
@@ -230,19 +262,37 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		);
 	}
 
+	define_events_for_custom_elements(events: Array<string>) {
+		this.events = events;
+
+		this.events.forEach((evt_name) => {
+			this.children_CE.forEach((children) => {
+				// @ts-expect-error CustomEvent.
+				children.addEventListener(evt_name, (evt: CustomEvent) => {
+					this.$native_element.dispatchEvent(
+						new CustomEvent(evt_name, { detail: evt.detail })
+					);
+				});
+			});
+		});
+	}
+
 	/* Fluent */
 
-	classes(classNames: HTMLExtension.HTMLClass): this {
+	classes(classNames: HTMLExtension.HTMLClass): this
+	{
 		this.handle_object_class(classNames);
 		return this;
 	}
 
-	css(cssom: HTMLExtension.CSSOM): this {
+	css(cssom: HTMLExtension.CSSOM): this
+	{
 		this.handle_object_css(cssom);
 		return this;
 	}
 
-	id(id: NativeHTMLElement["id"]): this {
+	id(id: NativeHTMLElement["id"]): this
+	{
 		this.$native_element.id = id;
 		return this;
 	}
@@ -261,7 +311,8 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		type: any,
 		listener: HTMLExtension.ChooseGoodEvent<any>,
 		options?: boolean | AddEventListenerOptions
-	): this {
+	): this
+	{
 		this.$native_element.removeEventListener(type, listener, options);
 		return this;
 	}
@@ -280,12 +331,14 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		type: any,
 		listener: HTMLExtension.ChooseGoodEvent<any>,
 		options?: boolean | AddEventListenerOptions
-	): this {
+	): this
+	{
 		this.$native_element.addEventListener(type, listener, options);
 		return this;
 	}
 
-	style(style_obj: HTMLExtension.HTMLStyle): this {
+	style(style_obj: HTMLExtension.HTMLStyle): this
+	{
 		this.handle_object_style(style_obj);
 		return this;
 	}

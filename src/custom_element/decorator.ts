@@ -1,4 +1,4 @@
-import { kebabize } from "~/helpers/string";
+import { capitalize, kebabize } from "~/helpers/string";
 
 import { type AttachShadowMode, GlobalCustomElement } from "./global";
 import type { CustomElementConstructor, CustomElementInterface } from "./interface";
@@ -48,6 +48,17 @@ function customElement(options?: CustomElementDecoratorOptions)
 	{
 		let custom_tag_name = options?.tagName || kebabize(UserCustomElement.name);
 
+
+		function custom_event_name(name: string): string
+		{
+			let method_name = "handle";
+			method_name += capitalize(name, {
+				includes_separators: false,
+			});
+			method_name += "Event";
+			return method_name;
+		}
+
 		class LocalCustomElement extends GlobalCustomElement
 		{
 			public static TAG_NAME: string = custom_tag_name;
@@ -71,12 +82,38 @@ function customElement(options?: CustomElementDecoratorOptions)
 				let $extension = this.element.render();
 
 				this.root.appendChild($extension.$native_element);
+
+				return $extension;
 			}
 
 			connectedCallback()
 			{
 				this.element.mounted?.();
-				this.render();
+				let $extension = this.render();
+				$extension.define_events_for_custom_elements(
+					UserCustomElement.events || []
+				);
+				(UserCustomElement.events || []).forEach((evt_name) => {
+					let method_name = custom_event_name(evt_name);
+
+					// @ts-expect-error : TODO
+					if (!this.element[method_name]) {
+						console.error(
+							"La méthode «",
+							method_name,
+							"»",
+							"n'existe pas sur «",
+							this,
+							"»"
+						);
+						return;
+					}
+
+					$extension.on(evt_name, (evt) => {
+						// @ts-expect-error : TODO
+						this.element[method_name](evt);
+					});
+				});
 			}
 
 			attributeChangedCallback(

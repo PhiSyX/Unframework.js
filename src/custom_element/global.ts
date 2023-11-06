@@ -18,6 +18,12 @@ class GlobalCustomElement extends HTMLElement
 
 		this.root = this.attachShadow({ mode });
 	}
+
+	public emit(key: string, value: unknown)
+	{
+		let new_event = new CustomEvent(key, { detail: value });
+		this.dispatchEvent(new_event);
+	}
 }
 
 // ------ //
