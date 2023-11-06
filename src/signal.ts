@@ -18,7 +18,7 @@ class Signal<T extends { toString(): string } = any>
 		return this.data.value;
 	}
 
-	replace(new_value: (value: T) => T | T)
+	replace(new_value: T | ((value: T) => T))
 	{
 		if (typeof new_value === "function") {
 			this.data.value = new_value(this.data.value);
