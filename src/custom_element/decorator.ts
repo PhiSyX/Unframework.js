@@ -64,7 +64,6 @@ function customElement(options?: CustomElementDecoratorOptions)
 
 				this.element = new UserCustomElement(this);
 				this.element.customElement = this;
-				this.render();
 			}
 
 			render()
@@ -77,6 +76,7 @@ function customElement(options?: CustomElementDecoratorOptions)
 			connectedCallback()
 			{
 				this.element.mounted?.();
+				this.render();
 			}
 
 			attributeChangedCallback(

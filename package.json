@@ -12,5 +12,8 @@
     "@types/node": "^20.8.10",
     "typescript": "^5.0.2",
     "vite": "^4.4.5"
+  },
+  "dependencies": {
+    "clsx": "^2.0.0"
   }
 }

@@ -6,13 +6,38 @@ type SignalOptions<T> = {
 	parser?: (_: unknown) => T;
 };
 
+type ComputedWatchFnOptions = {
+	immediate?: boolean
+}
+
+type ComputedWatchCallback<R = any, T = any> = (_: T) => R;
+type WatchCallback<R = any, T = any> = (oldValue: T, newValue: T) => R;
+
 // -------------- //
 // Implémentation //
 // -------------- //
 
-class Signal<T extends { toString(): string } = any>
+class Computed<R>
+{
+	constructor(public signal: Signal, public ret_fn: ComputedWatchCallback<R>) {}
+
+	watch(callback: (value: any) => void, options?: ComputedWatchFnOptions) {
+		this.signal.watches_callback.push((old_value, new_value) => {
+			if (old_value != new_value) {
+				callback(this.ret_fn(new_value));
+			}
+		});
+
+		if (options?.immediate) {
+			callback(this.ret_fn(this.signal.valueOf()));
+		}
+	}
+}
+
+class Signal<T = any>
 {
 	public trigger_elements: Array<HTMLElement | Text> = [];
+	public watches_callback: Array<WatchCallback<any, T>> = [];
 
 	private data!: { value: T };
 	private options: SignalOptions<T> = {
@@ -30,9 +55,16 @@ class Signal<T extends { toString(): string } = any>
 		return this.valueOf();
 	}
 
+	computed<R>(fn: (_: T) => R): Computed<R>
+	{
+		return new Computed(this, fn);
+	}
+
 	replace(new_value: T | ((value: T) => T))
 	{
+		let old_value = this.data.value;
 		if (typeof new_value === "function") {
+			// @ts-expect-error ?
 			this.data.value = new_value(this.valueOf());
 		} else {
 			this.data.value = this.options.parser?.(new_value) ?? new_value;
@@ -40,6 +72,9 @@ class Signal<T extends { toString(): string } = any>
 
 		this.trigger_elements.forEach(($el) => {
 			$el.textContent = this.toString();
+		});
+		this.watches_callback.forEach((watch_fn) => {
+			watch_fn(old_value, this.data.value);
 		});
 	}
 
@@ -50,7 +85,7 @@ class Signal<T extends { toString(): string } = any>
 
 	toString(): string
 	{
-		return this.valueOf().toString();
+		return (this.valueOf() as { toString(): string }).toString();
 	}
 }
 
@@ -74,4 +109,4 @@ function is_signal(value: unknown): value is Signal
 // Export //
 // ------ //
 
-export { is_signal, Signal, signal };
+export { Computed, is_signal, Signal, signal };
