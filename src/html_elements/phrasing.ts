@@ -1,12 +1,6 @@
 import { HTMLExtension } from "~/html_extension";
 
 // -------- //
-// Constant //
-// -------- //
-
-const BREAK: HTMLExtension<HTMLBRElement> = br();
-
-// -------- //
 // Fonction //
 // -------- //
 
@@ -29,4 +23,4 @@ function strong(...args: HTMLExtension.Args): HTMLExtension<HTMLSpanElement>
 // Export //
 // ------ //
 
-export { br, BREAK, p, strong };
+export { br, p, strong };
