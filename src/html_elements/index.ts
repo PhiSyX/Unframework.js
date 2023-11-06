@@ -12,7 +12,10 @@ function fragment(...extensions: Array<HTMLExtension>): HTMLExtension {
 // Export //
 // ------ //
 
+export * from "./embedded";
 export * from "./flow";
+export * from "./form";
+export * from "./heading";
 export * from "./interactive";
 export * from "./phrasing";
 export { fragment };
