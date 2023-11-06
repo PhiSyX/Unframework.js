@@ -7,8 +7,8 @@ type SignalOptions<T> = {
 };
 
 type ComputedWatchFnOptions = {
-	immediate?: boolean
-}
+	immediate?: boolean;
+};
 
 type ComputedWatchCallback<R = any, T = any> = (_: T) => R;
 type WatchCallback<R = any, T = any> = (oldValue: T, newValue: T) => R;
@@ -17,9 +17,11 @@ type WatchCallback<R = any, T = any> = (oldValue: T, newValue: T) => R;
 // Implémentation //
 // -------------- //
 
-class Computed<R>
-{
-	constructor(public signal: Signal, public ret_fn: ComputedWatchCallback<R>) {}
+class Computed<R> {
+	constructor(
+		public signal: Signal,
+		public ret_fn: ComputedWatchCallback<R>
+	) {}
 
 	watch(callback: (value: any) => void, options?: ComputedWatchFnOptions) {
 		this.signal.watches_callback.push((old_value, new_value) => {
@@ -34,8 +36,7 @@ class Computed<R>
 	}
 }
 
-class Signal<T = any>
-{
+class Signal<T = any> {
 	public trigger_elements: Array<HTMLElement | Text> = [];
 	public watches_callback: Array<WatchCallback<any, T>> = [];
 
@@ -44,24 +45,20 @@ class Signal<T = any>
 		parser: (v: unknown) => v as T,
 	};
 
-	constructor(value: T, options: SignalOptions<T>)
-	{
+	constructor(value: T, options: SignalOptions<T>) {
 		this.data = { value };
 		this.options = options;
 	}
 
-	get value(): T
-	{
+	get value(): T {
 		return this.valueOf();
 	}
 
-	computed<R>(fn: (_: T) => R): Computed<R>
-	{
+	computed<R>(fn: (_: T) => R): Computed<R> {
 		return new Computed(this, fn);
 	}
 
-	replace(new_value: T | ((value: T) => T))
-	{
+	replace(new_value: T | ((value: T) => T)) {
 		let old_value = this.data.value;
 		if (typeof new_value === "function") {
 			// @ts-expect-error ?
@@ -78,13 +75,11 @@ class Signal<T = any>
 		});
 	}
 
-	valueOf(): T
-	{
+	valueOf(): T {
 		return this.options.parser?.(this.data.value) ?? this.data.value;
 	}
 
-	toString(): string
-	{
+	toString(): string {
 		return (this.valueOf() as { toString(): string }).toString();
 	}
 }
@@ -95,13 +90,12 @@ class Signal<T = any>
 
 function signal<T extends { toString(): string }>(
 	data: T,
-	parser?: SignalOptions<T>["parser"],
+	parser?: SignalOptions<T>["parser"]
 ): Signal<T> {
 	return new Signal(data, { parser });
 }
 
-function is_signal(value: unknown): value is Signal
-{
+function is_signal(value: unknown): value is Signal {
 	return value instanceof Signal;
 }
 

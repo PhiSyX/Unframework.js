@@ -2,8 +2,7 @@
 // Fonction //
 // -------- //
 
-function is_primitive<K extends unknown>(value: K): value is K
-{
+function is_primitive<K extends unknown>(value: K): value is K {
 	return (
 		typeof value === "string" ||
 		typeof value === "boolean" ||

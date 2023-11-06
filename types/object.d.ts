@@ -1,4 +1,3 @@
-
 declare interface ObjectConstructor {
 	entries<
 		T extends {

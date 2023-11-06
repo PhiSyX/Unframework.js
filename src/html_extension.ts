@@ -23,7 +23,9 @@ namespace HTMLExtension {
 	export type HTMLClass = HTMLClassDictionary | string | HTMLClassArray;
 
 	export type HTMLStyle = Partial<{
-		[P in keyof CSSStyleDeclaration]: CSSStyleDeclaration[P] | Computed<string>;
+		[P in keyof CSSStyleDeclaration]:
+			| CSSStyleDeclaration[P]
+			| Computed<string>;
 	}> & {
 		[p: `--${string}`]: string;
 	};
@@ -34,7 +36,12 @@ namespace HTMLExtension {
 		style: HTMLStyle;
 	}>;
 
-	export type Attr = HTMLExtension | HTMLElement | HTMLObject | Primitive | Signal;
+	export type Attr =
+		| HTMLExtension
+		| HTMLElement
+		| HTMLObject
+		| Primitive
+		| Signal;
 
 	export type Args = Array<Attr>;
 
@@ -56,8 +63,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	>(
 		tag_name: TagName,
 		args: HTMLExtension.Args
-	): HTMLExtension<NativeHTMLElement>
-	{
+	): HTMLExtension<NativeHTMLElement> {
 		let $native_html_element = document.createElement(
 			tag_name
 		) as NativeHTMLElement;
@@ -65,10 +71,10 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	}
 
 	public static createFragment(
-		extensions: Array<HTMLExtension>,
-	): HTMLExtension
-	{
-		let $native_fragment = document.createDocumentFragment() as unknown as HTMLElement;
+		extensions: Array<HTMLExtension>
+	): HTMLExtension {
+		let $native_fragment =
+			document.createDocumentFragment() as unknown as HTMLElement;
 		extensions.forEach((extension) => {
 			$native_fragment.append(extension.$native_element);
 		});
@@ -84,11 +90,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	children_CE: Array<HTMLElement> = [];
 	events: Array<string> = [];
 
-	constructor(
-		$native_element: NativeHTMLElement,
-		args: HTMLExtension.Args
-	)
-	{
+	constructor($native_element: NativeHTMLElement, args: HTMLExtension.Args) {
 		this.$native_element = $native_element;
 
 		for (let arg of args) {
@@ -121,65 +123,65 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		this.args = args;
 	}
 
-	handle_element(arg: HTMLElement)
-	{
+	handle_element(arg: HTMLElement) {
 		this.children_CE.push(arg);
 		this.$native_element.append(arg);
 	}
 
-	handle_extension(arg: HTMLExtension)
-	{
+	handle_extension(arg: HTMLExtension) {
 		this.$native_element.append(arg.$native_element);
 	}
 
-	handle_object(arg: HTMLExtension.HTMLObject)
-	{
+	handle_object(arg: HTMLExtension.HTMLObject) {
 		let entries = Object.entries(arg);
 
 		for (let entry of entries) {
 			switch (entry[0]) {
 				case "class":
-				{
-					this.handle_object_class(entry[1]);
-				}
-				break;
+					{
+						this.handle_object_class(entry[1]);
+					}
+					break;
 
 				case "css":
-				{
-					this.handle_object_css(entry[1]);
-				} break;
+					{
+						this.handle_object_css(entry[1]);
+					}
+					break;
 
 				case "style":
-				{
-					this.handle_object_style(entry[1]);
-				}
-				break;
+					{
+						this.handle_object_style(entry[1]);
+					}
+					break;
 
 				default:
-				{
-					this.$native_element.setAttribute(entry[0], entry[1]);
-				}
-				break;
+					{
+						this.$native_element.setAttribute(entry[0], entry[1]);
+					}
+					break;
 			}
 		}
 	}
 
-	handle_object_class(classNames: HTMLExtension.HTMLClass)
-	{
+	handle_object_class(classNames: HTMLExtension.HTMLClass) {
 		if (Array.isArray(classNames)) {
 			classNames.forEach((c) => this.handle_object_class(c));
 		} else if (typeof classNames === "object") {
 			for (let cls of Object.entries(classNames)) {
 				if (cls[1] instanceof Computed) {
 					let computed = cls[1];
-					computed.watch((value) => {
-						let outputClsx = clsx({ [cls[0]]: value });
-						if (outputClsx.length > 0) {
-							this.$native_element.classList.add(outputClsx);
-						} else {
-							this.$native_element.classList.remove(cls[0]);
-						}
-					}, { immediate: true });
+					computed.watch(
+						(value) => {
+							let outputClsx = clsx({ [cls[0]]: value });
+							if (outputClsx.length > 0) {
+								this.$native_element.classList.add(outputClsx);
+							} else {
+								this.$native_element.classList.remove(cls[0]);
+							}
+						},
+						{ immediate: true }
+					);
 				} else {
 					let outputClsx = clsx({ [cls[0]]: cls[1] });
 					if (outputClsx.length > 0) {
@@ -195,8 +197,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		}
 	}
 
-	handle_object_css(cssom: HTMLExtension.CSSOM)
-	{
+	handle_object_css(cssom: HTMLExtension.CSSOM) {
 		let element = document.createElement("style");
 		for (let rulesets of Object.entries(cssom)) {
 			let [group_selectors, declaration_block] = rulesets;
@@ -204,7 +205,9 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 			element.textContent += `${group_selectors}{`;
 
 			for (let [property, value] of Object.entries(declaration_block)) {
-				element.textContent += `${kebabize(property.toString())}:${value};`;
+				element.textContent += `${kebabize(
+					property.toString()
+				)}:${value};`;
 			}
 
 			element.textContent += `}`;
@@ -213,8 +216,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		this.$native_element.append(element);
 	}
 
-	handle_object_style(style_obj: HTMLExtension.HTMLStyle)
-	{
+	handle_object_style(style_obj: HTMLExtension.HTMLStyle) {
 		for (let [property, value] of Object.entries(style_obj)) {
 			if (value instanceof Computed) {
 				value.watch((data) => {
@@ -222,7 +224,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 						property.toString(),
 						data.toString()
 					);
-				})
+				});
 			} else {
 				this.$native_element.style.setProperty(
 					property.toString(),
@@ -232,8 +234,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		}
 	}
 
-	handle_primitive(arg: HTMLExtension.Primitive)
-	{
+	handle_primitive(arg: HTMLExtension.Primitive) {
 		let text = arg.toString();
 		if (
 			text.startsWith("&") &&
@@ -249,8 +250,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		}
 	}
 
-	handle_signal(arg: Signal)
-	{
+	handle_signal(arg: Signal) {
 		if (is_primitive(arg.value)) {
 			arg.trigger_elements.push(
 				document.createTextNode(arg.value.toString())
@@ -279,20 +279,17 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 
 	/* Fluent */
 
-	classes(classNames: HTMLExtension.HTMLClass): this
-	{
+	classes(classNames: HTMLExtension.HTMLClass): this {
 		this.handle_object_class(classNames);
 		return this;
 	}
 
-	css(cssom: HTMLExtension.CSSOM): this
-	{
+	css(cssom: HTMLExtension.CSSOM): this {
 		this.handle_object_css(cssom);
 		return this;
 	}
 
-	id(id: NativeHTMLElement["id"]): this
-	{
+	id(id: NativeHTMLElement["id"]): this {
 		this.$native_element.id = id;
 		return this;
 	}
@@ -311,8 +308,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		type: any,
 		listener: HTMLExtension.ChooseGoodEvent<any>,
 		options?: boolean | AddEventListenerOptions
-	): this
-	{
+	): this {
 		this.$native_element.removeEventListener(type, listener, options);
 		return this;
 	}
@@ -331,14 +327,12 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		type: any,
 		listener: HTMLExtension.ChooseGoodEvent<any>,
 		options?: boolean | AddEventListenerOptions
-	): this
-	{
+	): this {
 		this.$native_element.addEventListener(type, listener, options);
 		return this;
 	}
 
-	style(style_obj: HTMLExtension.HTMLStyle): this
-	{
+	style(style_obj: HTMLExtension.HTMLStyle): this {
 		this.handle_object_style(style_obj);
 		return this;
 	}

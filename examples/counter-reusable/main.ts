@@ -11,8 +11,7 @@ import { HTMLExtension } from "~/html_extension";
 import { signal } from "~/signal";
 
 @customElement()
-export class AppCounter
-{
+export class AppCounter {
 	/**
 	 * Events authorized
 	 */
@@ -26,8 +25,7 @@ export class AppCounter
 	step = signal(1, Number);
 
 	@attr({ parser: Number })
-	get base(): number
-	{
+	get base(): number {
 		return 0;
 	}
 
@@ -41,8 +39,7 @@ export class AppCounter
 	 * Lifecycle
 	 */
 
-	mounted()
-	{
+	mounted() {
 		this.total.replace(this.base);
 	}
 
@@ -50,8 +47,7 @@ export class AppCounter
 	 * Methods
 	 */
 
-	render(): HTMLExtension<HTMLDivElement>
-	{
+	render(): HTMLExtension<HTMLDivElement> {
 		return div(
 			p(
 				"Le compteur total est de ",
@@ -64,13 +60,13 @@ export class AppCounter
 			br(),
 			use(DecrementCounterButton, {
 				step: this.step.valueOf(),
-			}),
+			})
 		)
 			.id("my-best-counter")
 			.css({
 				".counter-15": {
 					backgroundColor: "black",
-				}
+				},
 			})
 			.classes({
 				"counter-15": this.total.computed((total) => {
@@ -78,7 +74,7 @@ export class AppCounter
 				}),
 			})
 			.style({
-				"color": this.total.computed((total) => {
+				color: this.total.computed((total) => {
 					return total >= 15 && total <= 20 ? "red" : "black";
 				}),
 			});
@@ -88,13 +84,11 @@ export class AppCounter
 	 * Events
 	 */
 
-	handleDecrementEvent = (evt: CustomEvent<{ counter: number; }>) =>
-	{
-		this.total.replace(total => total - evt.detail.counter);
+	handleDecrementEvent = (evt: CustomEvent<{ counter: number }>) => {
+		this.total.replace((total) => total - evt.detail.counter);
 	};
 
-	handleIncrementEvent = (evt: CustomEvent<{ counter: number; }>) =>
-	{
-		this.total.replace(total => total + evt.detail.counter);
+	handleIncrementEvent = (evt: CustomEvent<{ counter: number }>) => {
+		this.total.replace((total) => total + evt.detail.counter);
 	};
 }

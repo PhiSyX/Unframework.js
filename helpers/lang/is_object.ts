@@ -2,8 +2,7 @@
 // Fonction //
 // -------- //
 
-function is_object<K extends unknown>(value: unknown): value is K
-{
+function is_object<K extends unknown>(value: unknown): value is K {
 	return typeof value === "object";
 }
 

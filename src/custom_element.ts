@@ -9,12 +9,11 @@ import type {
 
 function use<
 	UCE extends CustomElementConstructor<UCEInstance>,
-	UCEInstance extends CustomElementInterface,
+	UCEInstance extends CustomElementInterface
 >(
 	UserCustomElement: UCE,
 	props?: Record<string, { toString(): string }>
-): HTMLElement
-{
+): HTMLElement {
 	let ce = document.createElement(UserCustomElement.TAG_NAME!);
 
 	if (props) {

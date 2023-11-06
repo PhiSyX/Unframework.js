@@ -9,8 +9,7 @@ import { HTMLExtension } from "~/html_extension";
 import { signal } from "~/signal";
 
 @customElement()
-export class AppCounter
-{
+export class AppCounter {
 	/**
 	 * Attributes
 	 */
@@ -19,8 +18,7 @@ export class AppCounter
 	step = signal(1, Number);
 
 	@attr({ parser: Number })
-	get base(): number
-	{
+	get base(): number {
 		return 0;
 	}
 
@@ -34,8 +32,7 @@ export class AppCounter
 	 * Lifecycle
 	 */
 
-	mounted()
-	{
+	mounted() {
 		this.total.replace(this.base);
 	}
 
@@ -43,8 +40,7 @@ export class AppCounter
 	 * Methods
 	 */
 
-	render(): HTMLExtension<HTMLDivElement>
-	{
+	render(): HTMLExtension<HTMLDivElement> {
 		return div(
 			p(
 				"Le compteur total est de ",
@@ -52,16 +48,22 @@ export class AppCounter
 				" !"
 			),
 			button("Incrémenter x", this.step).on("click", this.increment_step),
-			button("Incrémenter ", this.step, "x10").on("click", this.increment_x),
+			button("Incrémenter ", this.step, "x10").on(
+				"click",
+				this.increment_x
+			),
 			br(),
 			button("Décrémenter x", this.step).on("click", this.decrement_step),
-			button("Décrémenter ", this.step, "x10").on("click", this.decrement_x)
+			button("Décrémenter ", this.step, "x10").on(
+				"click",
+				this.decrement_x
+			)
 		)
 			.id("my-best-counter")
 			.css({
 				".counter-15": {
 					backgroundColor: "black",
-				}
+				},
 			})
 			.classes({
 				"counter-15": this.total.computed((total) => {
@@ -69,7 +71,7 @@ export class AppCounter
 				}),
 			})
 			.style({
-				"color": this.total.computed((total) => {
+				color: this.total.computed((total) => {
 					return total >= 15 && total <= 20 ? "red" : "black";
 				}),
 			});
@@ -79,8 +81,7 @@ export class AppCounter
 	 * Events
 	 */
 
-	decrement_step = async (_: MouseEvent, n: number = 1) =>
-	{
+	decrement_step = async (_: MouseEvent, n: number = 1) => {
 		let step = this.step.valueOf();
 		for (let i = 0; i < n; i++) {
 			this.total.replace((total) => total - step);
@@ -88,13 +89,11 @@ export class AppCounter
 		}
 	};
 
-	decrement_x = async (evt: MouseEvent) =>
-	{
+	decrement_x = async (evt: MouseEvent) => {
 		this.decrement_step(evt, 10);
 	};
 
-	increment_step = async (_: MouseEvent, n: number = 1) =>
-	{
+	increment_step = async (_: MouseEvent, n: number = 1) => {
 		let step = this.step.valueOf();
 		for (let i = 0; i < n; i++) {
 			this.total.replace((total) => total + step);
@@ -102,8 +101,7 @@ export class AppCounter
 		}
 	};
 
-	increment_x = async (evt: MouseEvent) =>
-	{
+	increment_x = async (evt: MouseEvent) => {
 		this.increment_step(evt, 10);
 	};
 }

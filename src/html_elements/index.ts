@@ -4,8 +4,7 @@ import { HTMLExtension } from "~/html_extension";
 // Fonction //
 // -------- //
 
-function fragment(...extensions: Array<HTMLExtension>): HTMLExtension
-{
+function fragment(...extensions: Array<HTMLExtension>): HTMLExtension {
 	return HTMLExtension.createFragment(extensions);
 }
 

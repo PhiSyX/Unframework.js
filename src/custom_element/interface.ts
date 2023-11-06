@@ -5,8 +5,7 @@ import type { GlobalCustomElement } from "./global";
 // Interface //
 // --------- //
 
-interface CustomElementConstructor<Instance extends CustomElementInterface>
-{
+interface CustomElementConstructor<Instance extends CustomElementInterface> {
 	new (_: GlobalCustomElement): Instance;
 
 	dyn_attributes?: Array<string>;
@@ -14,8 +13,7 @@ interface CustomElementConstructor<Instance extends CustomElementInterface>
 	TAG_NAME?: string;
 }
 
-interface CustomElementInterface
-{
+interface CustomElementInterface {
 	customElement?: GlobalCustomElement;
 
 	/**
@@ -34,7 +32,7 @@ interface CustomElementInterface
 	updated_attribute?: (
 		attribute_name: string,
 		attribute_old_value: string | null,
-		attribute_new_value: string | null,
+		attribute_new_value: string | null
 	) => void;
 
 	/**
