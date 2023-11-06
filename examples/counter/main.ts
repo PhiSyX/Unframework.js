@@ -56,7 +56,23 @@ export class AppCounter
 			br(),
 			button("Décrémenter x", this.step).on("click", this.decrement_step),
 			button("Décrémenter ", this.step, "x10").on("click", this.decrement_x)
-		);
+		)
+			.id("my-best-counter")
+			.css({
+				".counter-15": {
+					backgroundColor: "black",
+				}
+			})
+			.classes({
+				"counter-15": this.total.computed((total) => {
+					return total >= 15 && total <= 20;
+				}),
+			})
+			.style({
+				"color": this.total.computed((total) => {
+					return total >= 15 && total <= 20 ? "red" : "black";
+				}),
+			});
 	}
 
 	/**
