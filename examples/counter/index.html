@@ -7,6 +7,26 @@
 		<script src="main.ts" type="module"></script>
 	</head>
 	<body>
-		<app-counter></app-counter>
+		<details>
+			<summary>Compteur normal</summary>
+			<app-counter></app-counter>
+		</details>
+
+		<hr />
+
+		<details>
+			<summary>Compteur avec une base de <strong>10</strong></summary>
+			<app-counter base="10"></app-counter>
+		</details>
+
+		<hr />
+
+		<details>
+			<summary>
+				Compteur avec une base de <strong>5</strong> & un
+				pas de <strong>3</strong>.
+			</summary>
+			<app-counter base="5" step="3"></app-counter>
+		</details>
 	</body>
 </html>
