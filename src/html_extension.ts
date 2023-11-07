@@ -34,12 +34,15 @@ namespace HTMLExtension {
 		class: HTMLClass;
 		css: CSSOM;
 		style: HTMLStyle;
-	}>;
+	}> & {
+		[p: string]: string | boolean;
+	};
 
 	export type Attr =
 		| HTMLExtension
 		| HTMLElement
 		| HTMLObject
+		| DocumentFragment
 		| Primitive
 		| Signal;
 
@@ -71,12 +74,16 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	}
 
 	public static createFragment(
-		extensions: Array<HTMLExtension>
+		extensions: Array<HTMLExtension | DocumentFragment>
 	): HTMLExtension {
 		let $native_fragment =
 			document.createDocumentFragment() as unknown as HTMLElement;
 		extensions.forEach((extension) => {
-			$native_fragment.append(extension.$native_element);
+			if (extension instanceof DocumentFragment) {
+				$native_fragment.append(extension);
+			} else {
+				$native_fragment.append(extension.$native_element);
+			}
 		});
 		return new HTMLExtension($native_fragment, []);
 	}
@@ -109,6 +116,11 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 				continue;
 			}
 
+			if (arg instanceof Node) {
+				this.handle_node(arg);
+				continue;
+			}
+
 			if (is_object<HTMLExtension.HTMLObject>(arg)) {
 				this.handle_object(arg);
 				continue;
@@ -128,6 +140,11 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		this.$native_element.append(arg);
 	}
 
+	handle_node(arg: Node) {
+		console.log({ arg });
+		this.$native_element.append(arg);
+	}
+
 	handle_extension(arg: HTMLExtension) {
 		this.$native_element.append(arg.$native_element);
 	}
@@ -139,25 +156,40 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 			switch (entry[0]) {
 				case "class":
 					{
+						// @ts-expect-error -- TS pète les plombs.
 						this.handle_object_class(entry[1]);
 					}
 					break;
 
 				case "css":
 					{
+						// @ts-expect-error -- TS pète les plombs.
 						this.handle_object_css(entry[1]);
 					}
 					break;
 
 				case "style":
 					{
+						// @ts-expect-error -- TS pète les plombs.
 						this.handle_object_style(entry[1]);
 					}
 					break;
 
 				default:
 					{
-						this.$native_element.setAttribute(entry[0], entry[1]);
+						if (typeof entry[1] === "boolean") {
+							if (entry[1]) {
+								this.$native_element.setAttribute(
+									entry[0],
+									entry[0]
+								);
+							}
+						} else {
+							this.$native_element.setAttribute(
+								entry[0],
+								entry[1]
+							);
+						}
 					}
 					break;
 			}
@@ -199,6 +231,10 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 
 	handle_object_css(cssom: HTMLExtension.CSSOM) {
 		let element = document.createElement("style");
+		if (this.$native_element.localName === element.localName) {
+			element = this.$native_element as unknown as HTMLStyleElement;
+		}
+
 		for (let rulesets of Object.entries(cssom)) {
 			let [group_selectors, declaration_block] = rulesets;
 
@@ -213,18 +249,23 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 			element.textContent += `}`;
 		}
 
-		this.$native_element.append(element);
+		if (this.$native_element.localName !== element.localName) {
+			this.$native_element.append(element);
+		}
 	}
 
 	handle_object_style(style_obj: HTMLExtension.HTMLStyle) {
 		for (let [property, value] of Object.entries(style_obj)) {
 			if (value instanceof Computed) {
-				value.watch((data) => {
-					this.$native_element.style.setProperty(
-						property.toString(),
-						data.toString()
-					);
-				});
+				value.watch(
+					(data) => {
+						this.$native_element.style.setProperty(
+							property.toString(),
+							data.toString()
+						);
+					},
+					{ immediate: true }
+				);
 			} else {
 				this.$native_element.style.setProperty(
 					property.toString(),
@@ -236,6 +277,13 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 
 	handle_primitive(arg: HTMLExtension.Primitive) {
 		let text = arg.toString();
+
+		if (["input", "select"].includes(this.$native_element.localName)) {
+			// @ts-expect-error : input type
+			this.$native_element.value += text;
+			return;
+		}
+
 		if (
 			text.startsWith("&") &&
 			text.endsWith(";") &&
@@ -251,6 +299,13 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	}
 
 	handle_signal(arg: Signal) {
+		if (["input", "select"].includes(this.$native_element.localName)) {
+			// @ts-expect-error input
+			this.$native_element.value = arg.value.toString();
+			arg.trigger_elements.push(this.$native_element);
+			return;
+		}
+
 		if (is_primitive(arg.value)) {
 			arg.trigger_elements.push(
 				document.createTextNode(arg.value.toString())
@@ -277,6 +332,10 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		});
 	}
 
+	node(): NativeHTMLElement {
+		return this.$native_element;
+	}
+
 	/* Fluent */
 
 	classes(classNames: HTMLExtension.HTMLClass): this {
@@ -289,9 +348,19 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		return this;
 	}
 
+	focus(): this {
+		this.$native_element.focus();
+		return this;
+	}
+
 	id(id: NativeHTMLElement["id"]): this {
 		this.$native_element.id = id;
 		return this;
+	}
+
+	value() {
+		// @ts-expect-error input type
+		return this.$native_element.value;
 	}
 
 	off<K extends keyof HTMLElementEventMap>(
@@ -334,6 +403,38 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 
 	style(style_obj: HTMLExtension.HTMLStyle): this {
 		this.handle_object_style(style_obj);
+		return this;
+	}
+
+	replace_text(s: HTMLExtension.Primitive | Signal): this {
+		if (is_signal(s)) {
+			console.log({ s });
+		} else {
+			this.$native_element.innerText = s.toString();
+		}
+		return this;
+	}
+
+	text(s: HTMLExtension.Primitive): this {
+		this.handle_primitive(s);
+		return this;
+	}
+
+	when(
+		sig: Signal,
+		b: unknown,
+		cb: (
+			this: HTMLExtension<NativeHTMLElement>,
+			el: HTMLExtension<NativeHTMLElement>
+		) => void
+	): this {
+		sig.watches_callback.push((_, new_value) => {
+			setTimeout(() => {
+				if (new_value === b) {
+					cb.call(this, this);
+				}
+			}, 16);
+		});
 		return this;
 	}
 }

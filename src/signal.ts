@@ -25,7 +25,7 @@ class Computed<R> {
 
 	watch(callback: (value: any) => void, options?: ComputedWatchFnOptions) {
 		this.signal.watches_callback.push((old_value, new_value) => {
-			if (old_value != new_value) {
+			if (old_value !== new_value) {
 				callback(this.ret_fn(new_value));
 			}
 		});

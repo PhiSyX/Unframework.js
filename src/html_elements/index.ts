@@ -4,7 +4,9 @@ import { HTMLExtension } from "~/html_extension";
 // Fonction //
 // -------- //
 
-function fragment(...extensions: Array<HTMLExtension>): HTMLExtension {
+function fragment(
+	...extensions: Array<HTMLExtension | DocumentFragment>
+): HTMLExtension {
 	return HTMLExtension.createFragment(extensions);
 }
 
@@ -17,5 +19,6 @@ export * from "./flow";
 export * from "./form";
 export * from "./heading";
 export * from "./interactive";
+export * from "./metadata";
 export * from "./phrasing";
 export { fragment };
