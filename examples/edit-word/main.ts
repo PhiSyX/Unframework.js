@@ -88,13 +88,7 @@ export class EditWord {
 
 @customElement({ mode: "open" })
 export class PersonDetails {
-	get template(): DocumentFragment {
-		const template = document.querySelector("") as HTMLTemplateElement;
-		const templateContent = template.content;
-		return templateContent;
-	}
-
-	render(): any {
+	render(): HTMLExtension {
 		return fragment(
 			style({
 				div: {
