@@ -82,8 +82,10 @@ function customElement(options?: CustomElementDecoratorOptions) {
 
 			update() {
 				super.update();
-				this.root.removeChild(this.root.firstChild!);
-				this.connectedCallback();
+				if (this.root.firstChild) {
+					this.root.removeChild(this.root.firstChild);
+					this.connectedCallback();
+				}
 			}
 
 			connectedCallback() {
@@ -130,9 +132,11 @@ function customElement(options?: CustomElementDecoratorOptions) {
 					if (is_signal(p)) {
 						p.replace(attribute_new_value);
 					} else {
+						// FIXME: améliorer cette partie.
 						(this.element as any)[attribute_name] = JSON.parse(
 							attribute_new_value!
 						);
+						this.update();
 					}
 				}
 
