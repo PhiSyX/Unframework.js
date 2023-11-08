@@ -89,6 +89,11 @@ class Signal<T = any> {
 	toString(): string {
 		return (this.valueOf() as { toString(): string }).toString();
 	}
+
+	watch<R>(fn: (_: this) => R, options?: ComputedWatchFnOptions) {
+		let c = new Computed(this, () => this);
+		c.watch(fn, options);
+	}
 }
 
 // -------- //

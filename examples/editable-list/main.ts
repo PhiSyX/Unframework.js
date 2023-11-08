@@ -48,7 +48,6 @@ export class EditableUList {
 									return it != item;
 								}),
 							});
-							this.customElement.update();
 						})
 				);
 			})
@@ -125,7 +124,7 @@ export class EditableList {
 	};
 
 	add_list_item = (_: MouseEvent) => {
-		// this.items.replace((items) => [...items, this.model.value]);
-		// this.model.replace("");
+		this.items.replace((items) => [...items, this.model.valueOf()]);
+		this.model.replace("");
 	};
 }

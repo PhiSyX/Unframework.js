@@ -413,12 +413,13 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	}
 
 	model<M extends HTMLExtension.Primitive>(model: Signal<M>): this {
-		this.handle_signal(model);
+		model.watch((m) => this.handle_signal(m), { immediate: true });
+
 		this.on("input", (evt) => {
 			// @ts-expect-error ?
 			model.replace(evt.target.value);
-			this.handle_signal(model);
 		});
+
 		return this;
 	}
 
