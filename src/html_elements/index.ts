@@ -19,6 +19,7 @@ export * from "./flow";
 export * from "./form";
 export * from "./heading";
 export * from "./interactive";
+export * from "./list";
 export * from "./metadata";
 export * from "./phrasing";
 export { fragment };

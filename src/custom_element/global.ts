@@ -21,6 +21,8 @@ class GlobalCustomElement extends HTMLElement {
 		let new_event = new CustomEvent(key, { detail: value });
 		this.dispatchEvent(new_event);
 	}
+
+	update() {}
 }
 
 // ------ //
