@@ -2,6 +2,7 @@ import type {
 	CustomElementConstructor,
 	CustomElementInterface,
 } from "./custom_element/interface";
+import { Computed, is_computed } from "./signal";
 
 // -------- //
 // Fonction //
@@ -12,14 +13,23 @@ function use<
 	UCEInstance extends CustomElementInterface
 >(
 	UserCustomElement: UCE,
-	props?: Record<string, { toString(): string }>
+	props?: Computed | Record<string, unknown>
 ): HTMLElement {
 	let ce = document.createElement(UserCustomElement.TAG_NAME!);
 
 	if (props) {
 		let entries = Object.entries(props);
 		for (let [k, v] of entries) {
-			ce.setAttribute(k, v.toString());
+			if (is_computed(v)) {
+				v.watch(
+					(p) => {
+						ce.setAttribute(k, JSON.stringify(p));
+					},
+					{ immediate: true }
+				);
+			} else {
+				ce.setAttribute(k, JSON.stringify(v));
+			}
 		}
 	}
 

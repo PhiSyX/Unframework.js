@@ -35,7 +35,12 @@ export function template(
 	return HTMLExtension.createElement("template", args);
 }
 
-export function template_content(id: string): DocumentFragment {
-	let element = document.querySelector(id) as HTMLTemplateElement;
-	return element.content;
+export function template_content(id: `#${string}`): Node {
+	let element = document.getElementById(
+		id.slice(1)
+	) as HTMLTemplateElement | null;
+	if (!element) {
+		throw new Error(`L'élément avec l'ID « ${id} » n'existe pas.`);
+	}
+	return element.content.cloneNode(true);
 }

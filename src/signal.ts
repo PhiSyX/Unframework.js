@@ -17,7 +17,7 @@ type WatchCallback<R = any, T = any> = (oldValue: T, newValue: T) => R;
 // Implémentation //
 // -------------- //
 
-class Computed<R> {
+class Computed<R = any> {
 	constructor(
 		public signal: Signal,
 		public ret_fn: ComputedWatchCallback<R>
@@ -50,10 +50,6 @@ class Signal<T = any> {
 		this.options = options;
 	}
 
-	get value(): T {
-		return this.valueOf();
-	}
-
 	computed<R>(fn: (_: T) => R): Computed<R> {
 		return new Computed(this, fn);
 	}
@@ -67,9 +63,20 @@ class Signal<T = any> {
 			this.data.value = this.options.parser?.(new_value) ?? new_value;
 		}
 
-		this.trigger_elements.forEach(($el) => {
-			$el.textContent = this.toString();
+		this.trigger_elements.forEach(($trigger) => {
+			if ($trigger instanceof Text) {
+				$trigger.textContent = this.toString();
+			} else {
+				// TODO: input type à améliorer
+				if (["input", "select"].includes($trigger.localName)) {
+					// @ts-expect-error ?
+					$trigger.input = this.toString();
+				} else {
+					$trigger.textContent = this.toString();
+				}
+			}
 		});
+
 		this.watches_callback.forEach((watch_fn) => {
 			watch_fn(old_value, this.data.value);
 		});
@@ -95,12 +102,16 @@ function signal<T extends { toString(): string }>(
 	return new Signal(data, { parser });
 }
 
-function is_signal(value: unknown): value is Signal {
+function is_signal<S>(value: unknown): value is Signal<S> {
 	return value instanceof Signal;
+}
+
+function is_computed(value: unknown): value is Computed {
+	return value instanceof Computed;
 }
 
 // ------ //
 // Export //
 // ------ //
 
-export { Computed, is_signal, Signal, signal };
+export { Computed, is_computed, is_signal, Signal, signal };

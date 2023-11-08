@@ -30,12 +30,10 @@ const Default: Options = {
 
 /// Remplace tous les premiers caractères des mots d'une chaîne de caractères
 /// |text| par une majuscule.
-function capitalize(text: string, user_options: Options = Default): string
-{
+function capitalize(text: string, user_options: Options = Default): string {
 	let options: Options = { ...Default, ...user_options };
 
-	const algo = (word: string) =>
-	{
+	const algo = (word: string) => {
 		if (word.length === 0) {
 			return word;
 		}

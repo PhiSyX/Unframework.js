@@ -5,7 +5,7 @@ import { HTMLExtension } from "~/html_extension";
 // -------- //
 
 function fragment(
-	...extensions: Array<HTMLExtension | DocumentFragment>
+	...extensions: Array<HTMLExtension | DocumentFragment | Node>
 ): HTMLExtension {
 	return HTMLExtension.createFragment(extensions);
 }

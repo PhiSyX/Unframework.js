@@ -80,13 +80,19 @@ function customElement(options?: CustomElementDecoratorOptions) {
 				return $extension;
 			}
 
+			update() {
+				super.update();
+				this.root.removeChild(this.root.firstChild!);
+				this.connectedCallback();
+			}
+
 			connectedCallback() {
 				this.element.mounted?.();
 				let $extension = this.render();
-				$extension.define_events_for_custom_elements(
-					UserCustomElement.events || []
-				);
-				(UserCustomElement.events || []).forEach((evt_name) => {
+
+				let events = UserCustomElement.events || [];
+				$extension.define_events_for_custom_elements(events);
+				events.forEach((evt_name) => {
 					let method_name = custom_event_name(evt_name);
 
 					// @ts-expect-error : TODO
@@ -118,8 +124,15 @@ function customElement(options?: CustomElementDecoratorOptions) {
 					UserCustomElement.dyn_attributes?.includes(attribute_name)
 				) {
 					let p = (this.element as any)[attribute_name];
-					if (p && is_signal(p)) {
+
+					if (!p) return;
+
+					if (is_signal(p)) {
 						p.replace(attribute_new_value);
+					} else {
+						(this.element as any)[attribute_name] = JSON.parse(
+							attribute_new_value!
+						);
 					}
 				}
 
@@ -152,18 +165,21 @@ function customElement(options?: CustomElementDecoratorOptions) {
 function attr<T extends CustomElementInterface>(
 	options?: AttrDecoratorOptions
 ) {
+	let parser = options?.parser || String;
+
 	return function (
 		_: T,
 		property_name: string,
 		descriptor: PropertyDescriptor
 	) {
+		let property_name_kb = kebabize(property_name);
 		const orig_getter = descriptor.get;
 
 		descriptor.get = function (this: T) {
-			let output =
-				options?.parser?.(
-					this.customElement?.getAttribute(property_name)
-				) || orig_getter?.call(this);
+			let output = parser(
+				this.customElement?.getAttribute(property_name_kb) ||
+					orig_getter?.call(this)
+			);
 			return output;
 		};
 	};
