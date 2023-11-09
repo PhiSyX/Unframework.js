@@ -40,12 +40,6 @@ export function progress(
 	return HTMLExtension.createElement("progress", args);
 }
 
-export function select(
-	...args: HTMLExtension.Args
-): HTMLExtension<HTMLSelectElement> {
-	return HTMLExtension.createElement("select", args);
-}
-
 export function textarea(
 	...args: HTMLExtension.Args
 ): HTMLExtension<HTMLTextAreaElement> {
