@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import {
 	is_array,
+	is_boolean,
 	is_dom_element,
 	is_dom_fragment,
 	is_dom_input,
@@ -16,7 +17,7 @@ import { Computed, Signal, is_computed, is_signal } from "./signal";
 // ---- //
 
 namespace HTMLExtension {
-	export type Primitive = boolean | number | string;
+	export type Primitive = bigint | boolean | number | string;
 
 	export type CSSOM = Partial<{
 		[K in keyof HTMLElementTagNameMap]: HTMLStyle;
@@ -39,6 +40,7 @@ namespace HTMLExtension {
 	};
 
 	export type HTMLObject = Partial<{
+		key: string;
 		class: HTMLClass;
 		css: CSSOM;
 		style: HTMLStyle;
@@ -46,12 +48,14 @@ namespace HTMLExtension {
 		[p: string]: string | boolean;
 	};
 
+	export type NodeExtension = Node & { extension?: HTMLExtension };
+
 	export type Attr =
 		| HTMLExtension
 		| HTMLElement
 		| HTMLObject
 		| DocumentFragment
-		| Node
+		| NodeExtension
 		| Primitive
 		| Signal;
 
@@ -69,7 +73,9 @@ namespace HTMLExtension {
 // -------------- //
 
 class HTMLExtension<
-	NativeHTMLElement extends HTMLElement & { extension?: HTMLExtension } = any
+	NativeHTMLElement extends HTMLElement & {
+		extension?: HTMLExtension;
+	} = any
 > {
 	public static createElement<
 		TagName extends keyof HTMLElementTagNameMap,
@@ -85,74 +91,96 @@ class HTMLExtension<
 	}
 
 	public static createFragment(
-		extensions: Array<HTMLExtension | DocumentFragment | Node>
+		children: Array<HTMLExtension | DocumentFragment | Node>
 	): HTMLExtension {
 		let $native_fragment =
 			document.createDocumentFragment() as unknown as HTMLElement;
-		extensions.forEach((extension) => {
-			if (is_dom_fragment(extension)) {
-				$native_fragment.append(extension);
-			} else if (is_dom_node(extension)) {
-				$native_fragment.append(extension);
+		for (let child of children) {
+			if (is_dom_fragment(child)) {
+				$native_fragment.append(child);
+			} else if (is_dom_node(child)) {
+				$native_fragment.append(child);
 			} else {
-				$native_fragment.append(extension.$native_element);
+				$native_fragment.append(child.node());
 			}
-		});
+		}
 		return new HTMLExtension($native_fragment, []);
 	}
 
 	/**
 	 * Élément DOM natif
 	 */
-	private $native_element!: NativeHTMLElement;
-	public args: HTMLExtension.Args = [];
+	#native_element!: NativeHTMLElement;
+	#args: HTMLExtension.Args = [];
+	#children_EX: Array<HTMLExtension> = [];
+	#children_CE: Array<HTMLElement> = [];
 
-	parent!: HTMLExtension;
-	children_EX: Array<HTMLExtension> = [];
-	children_CE: Array<HTMLElement> = [];
+	parent?: HTMLExtension;
 	events: Array<string> = [];
 	key!: string;
 
 	constructor($native_element: NativeHTMLElement, args: HTMLExtension.Args) {
-		this.$native_element = $native_element;
-		this.args = args;
+		this.#native_element = $native_element;
+		this.#args = args;
 		this.key = simple_uuid();
 
-		let observer = new MutationObserver((records) => {
-			records.forEach((record) => {
-				record.addedNodes.forEach((node) => {
-					// @ts-expect-error ?
-					let extension: HTMLExtension = node.extension;
-					if (!extension) return;
+		let observer = new MutationObserver(this.observer);
 
-					extension.parent = this;
-					// this.children_EX.push(extension);
-				});
-
-				record.removedNodes.forEach((node) => {
-					// @ts-expect-error ?
-					let extension: HTMLExtension = node.extension;
-					if (!extension) return;
-
-					// this.children_CE = this.children_CE.filter((e) => {
-					// 	return e.key != extension.key;
-					// });
-					// this.children_EX = this.children_EX.filter((e) => {
-					// 	return e.key != extension.key;
-					// });
-				});
-			});
-		});
-		observer.observe(this.$native_element, {
+		observer.observe(this.#native_element, {
 			childList: true,
 		});
 
 		this.handle();
-		this.$native_element.extension = this;
+		this.#native_element.extension = this;
 	}
 
+	observer = (records: Array<MutationRecord>) => {
+		let added_nodes = (node: HTMLExtension.NodeExtension) => {
+			let extension = node.extension;
+
+			this.#native_element.dispatchEvent(
+				new CustomEvent("added:children", {
+					detail: extension || node,
+				})
+			);
+
+			if (extension == null) {
+				return;
+			}
+
+			extension.parent = this;
+			// this.children_EX.push(extension);
+		};
+
+		let removed_nodes = (node: HTMLExtension.NodeExtension) => {
+			let extension = node.extension;
+
+			this.#native_element.dispatchEvent(
+				new CustomEvent("deleted:children", {
+					detail: extension || node,
+				})
+			);
+
+			if (extension == null) {
+				return;
+			}
+
+			// this.children_CE = this.children_CE.filter((e) => {
+			// 	return e.key != extension!.key;
+			// });
+			// this.children_EX = this.children_EX.filter((e) => {
+			// 	return e.key != extension!.key;
+			// });
+		};
+
+		for (let record of records) {
+			record.addedNodes.forEach(added_nodes);
+			record.removedNodes.forEach(removed_nodes);
+		}
+	};
+
 	handle() {
-		for (let arg of this.args) {
+		for (let arg of this.#args) {
 			if (is_signal(arg)) {
 				this.handle_signal(arg);
 				continue;
@@ -186,59 +214,60 @@ class HTMLExtension<
 	}
 
 	handle_custom_element(arg: HTMLElement) {
-		this.children_CE.push(arg);
-		this.$native_element.append(arg);
+		this.#children_CE.push(arg);
+		this.#native_element.append(arg);
 	}
 
 	handle_node(arg: Node) {
-		this.$native_element.append(arg);
+		this.#native_element.append(arg);
 	}
 
 	handle_extension(arg: HTMLExtension) {
-		this.children_EX.push(this);
-		this.$native_element.append(arg.$native_element);
+		this.#children_EX.push(this);
+		this.#native_element.append(arg.#native_element);
 	}
 
 	handle_object(arg: HTMLExtension.HTMLObject) {
 		let entries = Object.entries(arg);
 
-		for (let entry of entries) {
-			switch (entry[0]) {
+		for (let [k, p] of entries) {
+			switch (k) {
+				case "key":
+					{
+						this.key = p.toString();
+					}
+					break;
 				case "class":
 					{
 						// @ts-expect-error -- TS pète les plombs.
-						this.handle_object_class(entry[1]);
+						this.handle_object_class(p);
 					}
 					break;
 
 				case "css":
 					{
 						// @ts-expect-error -- TS pète les plombs.
-						this.handle_object_css(entry[1]);
+						this.handle_object_css(p);
 					}
 					break;
 
 				case "style":
 					{
 						// @ts-expect-error -- TS pète les plombs.
-						this.handle_object_style(entry[1]);
+						this.handle_object_style(p);
 					}
 					break;
 
 				default:
 					{
-						if (typeof entry[1] === "boolean") {
-							if (entry[1]) {
-								this.$native_element.setAttribute(
-									entry[0],
-									entry[0]
-								);
+						if (is_boolean(p)) {
+							if (p === true) {
+								this.#native_element.setAttribute(k, k);
+							} else {
+								this.#native_element.removeAttribute(k);
 							}
 						} else {
-							this.$native_element.setAttribute(
-								entry[0],
-								entry[1]
-							);
+							this.#native_element.setAttribute(k, p);
 						}
 					}
 					break;
@@ -248,7 +277,7 @@ class HTMLExtension<
 
 	handle_object_class(classNames: HTMLExtension.HTMLClass) {
 		if (is_array(classNames)) {
-			for (let c of classNames) this.handle_object_class(c);
+			for (let cls of classNames) this.handle_object_class(cls);
 			return;
 		}
 
@@ -258,17 +287,18 @@ class HTMLExtension<
 					let toggle_class = (b: boolean) => {
 						let output_cls = clsx({ [key]: b });
 						if (output_cls.length > 0) {
-							this.$native_element.classList.add(output_cls);
+							this.#native_element.classList.add(output_cls);
 						} else {
-							this.$native_element.classList.remove(key);
+							this.#native_element.classList.remove(key);
 						}
 					};
 					value.watch(toggle_class, { immediate: true });
-				} else {
-					let output_cls = clsx({ [key]: value });
-					if (output_cls.length > 0) {
-						this.$native_element.classList.add(output_cls);
-					}
+					return;
+				}
+
+				let output_cls = clsx({ [key]: value });
+				if (output_cls.length > 0) {
+					this.#native_element.classList.add(output_cls);
 				}
 			}
 
@@ -277,14 +307,14 @@ class HTMLExtension<
 
 		let output_cls = clsx(classNames);
 		if (output_cls.length > 0) {
-			this.$native_element.classList.add(output_cls);
+			this.#native_element.classList.add(output_cls);
 		}
 	}
 
 	handle_object_css(cssom: HTMLExtension.CSSOM) {
 		let element = document.createElement("style");
-		if (this.$native_element.localName === element.localName) {
-			element = this.$native_element as unknown as HTMLStyleElement;
+		if (this.#native_element.localName === element.localName) {
+			element = this.#native_element as unknown as HTMLStyleElement;
 		}
 
 		for (let rulesets of Object.entries(cssom)) {
@@ -301,8 +331,8 @@ class HTMLExtension<
 			element.textContent += `}`;
 		}
 
-		if (this.$native_element.localName !== element.localName) {
-			this.$native_element.append(element);
+		if (this.#native_element.localName !== element.localName) {
+			this.#native_element.append(element);
 		}
 	}
 
@@ -311,14 +341,14 @@ class HTMLExtension<
 			let property_k = kebabize(property.toString());
 			if (is_computed(value)) {
 				let set_property_fn = (data: ToString) => {
-					this.$native_element.style.setProperty(
+					this.#native_element.style.setProperty(
 						property_k,
 						data.toString()
 					);
 				};
 				value.watch(set_property_fn, { immediate: true });
 			} else {
-				this.$native_element.style.setProperty(
+				this.#native_element.style.setProperty(
 					property_k,
 					value!.toString()
 				);
@@ -329,8 +359,8 @@ class HTMLExtension<
 	handle_primitive(arg: HTMLExtension.Primitive) {
 		let text = arg.toString();
 
-		if (is_dom_input(this.$native_element)) {
-			this.$native_element.value += text;
+		if (is_dom_input(this.#native_element)) {
+			this.#native_element.value += text;
 			return;
 		}
 
@@ -342,15 +372,15 @@ class HTMLExtension<
 			let $temp = document.createElement("span");
 			$temp.innerHTML = text;
 			let first_child = $temp.firstChild!;
-			this.$native_element.append(first_child);
+			this.#native_element.append(first_child);
 		} else {
-			this.$native_element.append(text);
+			this.#native_element.append(text);
 		}
 	}
 
 	handle_signal(arg: Signal) {
-		if (is_dom_input(this.$native_element)) {
-			this.$native_element.value = arg.toString();
+		if (is_dom_input(this.#native_element)) {
+			this.#native_element.value = arg.toString();
 			return;
 		}
 
@@ -362,7 +392,7 @@ class HTMLExtension<
 			);
 		}
 
-		this.$native_element.append(
+		this.#native_element.append(
 			arg.trigger_elements[arg.trigger_elements.length - 1]
 		);
 	}
@@ -371,10 +401,10 @@ class HTMLExtension<
 		this.events = events;
 
 		this.events.forEach((evt_name) => {
-			this.children_CE.forEach((children) => {
+			this.#children_CE.forEach((children) => {
 				// @ts-expect-error CustomEvent.
 				children.addEventListener(evt_name, (evt: CustomEvent) => {
-					this.$native_element.dispatchEvent(
+					this.#native_element.dispatchEvent(
 						new CustomEvent(evt_name, { detail: evt.detail })
 					);
 				});
@@ -383,15 +413,15 @@ class HTMLExtension<
 	}
 
 	append(w: HTMLExtension) {
-		this.$native_element.append(w.node());
+		this.#native_element.append(w.node());
 	}
 
 	node(): NativeHTMLElement {
-		return this.$native_element;
+		return this.#native_element;
 	}
 
 	remove() {
-		this.$native_element.remove();
+		this.#native_element.remove();
 	}
 
 	/* Fluent */
@@ -406,13 +436,15 @@ class HTMLExtension<
 		return this;
 	}
 
-	focus(): this {
-		this.$native_element.focus();
+	autofocus(): this {
+		setTimeout(() => {
+			this.#native_element.focus();
+		});
 		return this;
 	}
 
 	id(id: NativeHTMLElement["id"]): this {
-		this.$native_element.id = id;
+		this.#native_element.id = id;
 		return this;
 	}
 
@@ -420,16 +452,24 @@ class HTMLExtension<
 		model.watch((m) => this.handle_signal(m), { immediate: true });
 
 		this.on("input", (evt) => {
-			// @ts-expect-error ?
+			// @ts-expect-error On sait que l'événement input n'est déclenché
+			// que sur les éléments de formulaire, et qu'ils ont la propriété
+			// dans leur objet.
 			model.replace(evt.target.value);
 		});
 
 		return this;
 	}
 
-	value() {
-		// @ts-expect-error input type
-		return this.$native_element.value;
+	/**
+	 * À n'utiliser que sur les éléments d'objets dont la propriété .value
+	 * existe.
+	 */
+	input(): string | null {
+		// @ts-expect-error On sait que l'événement input n'est déclenché
+		// que sur les éléments de formulaire, et qu'ils ont la propriété
+		// dans leur objet.
+		return this.#native_element.value;
 	}
 
 	off<K extends keyof HTMLElementEventMap>(
@@ -447,7 +487,7 @@ class HTMLExtension<
 		listener: HTMLExtension.ChooseGoodEvent<any>,
 		options?: boolean | AddEventListenerOptions
 	): this {
-		this.$native_element.removeEventListener(
+		this.#native_element.removeEventListener(
 			type,
 			listener.bind(this),
 			options
@@ -470,7 +510,7 @@ class HTMLExtension<
 		listener: HTMLExtension.ChooseGoodEvent<any>,
 		options?: boolean | AddEventListenerOptions
 	): this {
-		this.$native_element.addEventListener(
+		this.#native_element.addEventListener(
 			type,
 			listener.bind(this),
 			options

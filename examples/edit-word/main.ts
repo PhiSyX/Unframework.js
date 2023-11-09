@@ -53,7 +53,7 @@ export class EditWord {
 						);
 					})
 					.when(this.editable, false, ($el) => {
-						this.model.replace($el.value());
+						this.model.replace($el.input()!);
 					})
 					.on("blur", this.update_display)
 			)
