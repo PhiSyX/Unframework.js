@@ -2,6 +2,8 @@
 // Type //
 // ---- //
 
+import { is_dom_input } from "~/helpers/lang";
+
 type SignalOptions<T> = {
 	parser?: (_: unknown) => T;
 };
@@ -45,9 +47,9 @@ class Signal<T = any> {
 		parser: (v: unknown) => v as T,
 	};
 
-	constructor(value: T, options: SignalOptions<T>) {
+	constructor(value: T, options?: SignalOptions<T>) {
 		this.data = { value };
-		this.options = options;
+		this.options = options || this.options;
 	}
 
 	computed<R>(fn: (_: T) => R): Computed<R> {
@@ -67,10 +69,8 @@ class Signal<T = any> {
 			if ($trigger instanceof Text) {
 				$trigger.textContent = this.toString();
 			} else {
-				// TODO: input type à améliorer
-				if (["input", "select"].includes($trigger.localName)) {
-					// @ts-expect-error ?
-					$trigger.input = this.toString();
+				if (is_dom_input($trigger)) {
+					$trigger.value = this.toString();
 				} else {
 					$trigger.textContent = this.toString();
 				}
@@ -87,7 +87,7 @@ class Signal<T = any> {
 	}
 
 	toString(): string {
-		return (this.valueOf() as { toString(): string }).toString();
+		return (this.valueOf() as ToString).toString();
 	}
 
 	watch<R>(fn: (_: this) => R, options?: ComputedWatchFnOptions) {
@@ -100,11 +100,11 @@ class Signal<T = any> {
 // Fonction //
 // -------- //
 
-function signal<T extends { toString(): string }>(
+function signal<T extends ToString>(
 	data: T,
-	parser?: SignalOptions<T>["parser"]
+	options?: SignalOptions<T>
 ): Signal<T> {
-	return new Signal(data, { parser });
+	return new Signal(data, options);
 }
 
 function is_signal<S>(value: unknown): value is Signal<S> {

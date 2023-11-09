@@ -1,6 +1,14 @@
 import clsx from "clsx";
-import { is_object, is_primitive } from "~/helpers/lang";
-import { Computed, Signal, is_signal } from "./signal";
+import {
+	is_array,
+	is_dom_element,
+	is_dom_fragment,
+	is_dom_input,
+	is_dom_node,
+	is_object,
+	is_primitive,
+} from "~/helpers/lang";
+import { Computed, Signal, is_computed, is_signal } from "./signal";
 import { kebabize, simple_uuid } from "~/helpers/string";
 
 // ---- //
@@ -60,7 +68,9 @@ namespace HTMLExtension {
 // Implémentation //
 // -------------- //
 
-class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
+class HTMLExtension<
+	NativeHTMLElement extends HTMLElement & { extension?: HTMLExtension } = any
+> {
 	public static createElement<
 		TagName extends keyof HTMLElementTagNameMap,
 		NativeHTMLElement extends HTMLElementTagNameMap[TagName]
@@ -80,9 +90,9 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		let $native_fragment =
 			document.createDocumentFragment() as unknown as HTMLElement;
 		extensions.forEach((extension) => {
-			if (extension instanceof DocumentFragment) {
+			if (is_dom_fragment(extension)) {
 				$native_fragment.append(extension);
-			} else if (extension instanceof Node) {
+			} else if (is_dom_node(extension)) {
 				$native_fragment.append(extension);
 			} else {
 				$native_fragment.append(extension.$native_element);
@@ -94,7 +104,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	/**
 	 * Élément DOM natif
 	 */
-	public $native_element!: NativeHTMLElement;
+	private $native_element!: NativeHTMLElement;
 	public args: HTMLExtension.Args = [];
 
 	parent!: HTMLExtension;
@@ -138,7 +148,6 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 		});
 
 		this.handle();
-		// @ts-expect-error ?
 		this.$native_element.extension = this;
 	}
 
@@ -154,12 +163,12 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 				continue;
 			}
 
-			if (arg instanceof HTMLElement) {
+			if (is_dom_element(arg)) {
 				this.handle_custom_element(arg);
 				continue;
 			}
 
-			if (arg instanceof Node) {
+			if (is_dom_node(arg)) {
 				this.handle_node(arg);
 				continue;
 			}
@@ -238,27 +247,25 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	}
 
 	handle_object_class(classNames: HTMLExtension.HTMLClass) {
-		if (Array.isArray(classNames)) {
-			classNames.forEach((c) => this.handle_object_class(c));
+		if (is_array(classNames)) {
+			for (let c of classNames) this.handle_object_class(c);
 			return;
 		}
 
-		if (typeof classNames === "object") {
-			for (let cls of Object.entries(classNames)) {
-				if (cls[1] instanceof Computed) {
-					cls[1].watch(
-						(value) => {
-							let output_cls = clsx({ [cls[0]]: value });
-							if (output_cls.length > 0) {
-								this.$native_element.classList.add(output_cls);
-							} else {
-								this.$native_element.classList.remove(cls[0]);
-							}
-						},
-						{ immediate: true }
-					);
+		if (is_object(classNames)) {
+			for (let [key, value] of Object.entries(classNames)) {
+				if (is_computed(value)) {
+					let toggle_class = (b: boolean) => {
+						let output_cls = clsx({ [key]: b });
+						if (output_cls.length > 0) {
+							this.$native_element.classList.add(output_cls);
+						} else {
+							this.$native_element.classList.remove(key);
+						}
+					};
+					value.watch(toggle_class, { immediate: true });
 				} else {
-					let output_cls = clsx({ [cls[0]]: cls[1] });
+					let output_cls = clsx({ [key]: value });
 					if (output_cls.length > 0) {
 						this.$native_element.classList.add(output_cls);
 					}
@@ -301,16 +308,14 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 
 	handle_object_style(style_obj: HTMLExtension.HTMLStyle) {
 		for (let [property, value] of Object.entries(style_obj)) {
-			if (value instanceof Computed) {
-				value.watch(
-					(data) => {
-						this.$native_element.style.setProperty(
-							property.toString(),
-							data.toString()
-						);
-					},
-					{ immediate: true }
-				);
+			if (is_computed(value)) {
+				let set_property_fn = (data: ToString) => {
+					this.$native_element.style.setProperty(
+						property.toString(),
+						data.toString()
+					);
+				};
+				value.watch(set_property_fn, { immediate: true });
 			} else {
 				this.$native_element.style.setProperty(
 					property.toString(),
@@ -323,8 +328,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	handle_primitive(arg: HTMLExtension.Primitive) {
 		let text = arg.toString();
 
-		if (["input", "select"].includes(this.$native_element.localName)) {
-			// @ts-expect-error : input type
+		if (is_dom_input(this.$native_element)) {
 			this.$native_element.value += text;
 			return;
 		}
@@ -344,8 +348,7 @@ class HTMLExtension<NativeHTMLElement extends HTMLElement = any> {
 	}
 
 	handle_signal(arg: Signal) {
-		if (["input", "select"].includes(this.$native_element.localName)) {
-			// @ts-expect-error input
+		if (is_dom_input(this.$native_element)) {
 			this.$native_element.value = arg.toString();
 			return;
 		}

@@ -47,20 +47,18 @@ function customElement(options?: CustomElementDecoratorOptions) {
 		let custom_tag_name =
 			options?.tagName || kebabize(UserCustomElement.name);
 
-		function custom_event_name(name: string): string {
-			let method_name = "handle";
-			method_name += capitalize(name, {
+		function custom_event_name(name: string): `handle${string}Event` {
+			let capitalized = capitalize(name, {
 				includes_separators: false,
 			});
-			method_name += "Event";
-			return method_name;
+			return `handle${capitalized}Event`;
 		}
 
 		class LocalCustomElement extends GlobalCustomElement {
 			public static TAG_NAME: string = custom_tag_name;
 
 			static get observedAttributes(): Array<string> {
-				return UserCustomElement.dyn_attributes || [];
+				return UserCustomElement.dynamic_attributes || [];
 			}
 
 			public element!: UCEInstance;
@@ -75,7 +73,7 @@ function customElement(options?: CustomElementDecoratorOptions) {
 			render() {
 				let $extension = this.element.render();
 
-				this.root.appendChild($extension.$native_element);
+				this.root.appendChild($extension.node());
 
 				return $extension;
 			}
@@ -94,7 +92,8 @@ function customElement(options?: CustomElementDecoratorOptions) {
 
 				let events = UserCustomElement.events || [];
 				$extension.define_events_for_custom_elements(events);
-				events.forEach((evt_name) => {
+
+				for (let evt_name of events) {
 					let method_name = custom_event_name(evt_name);
 
 					// @ts-expect-error : TODO
@@ -107,14 +106,14 @@ function customElement(options?: CustomElementDecoratorOptions) {
 							this,
 							"»"
 						);
-						return;
+						break;
 					}
 
 					$extension.on(evt_name, (evt) => {
 						// @ts-expect-error : TODO
-						this.element[method_name](evt);
+						this.element[method_name].call(this.element, evt);
 					});
-				});
+				}
 			}
 
 			attributeChangedCallback(
@@ -123,7 +122,7 @@ function customElement(options?: CustomElementDecoratorOptions) {
 				attribute_new_value: string | null
 			) {
 				if (
-					UserCustomElement.dyn_attributes?.includes(attribute_name)
+					UserCustomElement.dynamic_attributes?.includes(attribute_name)
 				) {
 					let p = (this.element as any)[attribute_name];
 

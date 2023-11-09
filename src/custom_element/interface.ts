@@ -8,8 +8,19 @@ import type { GlobalCustomElement } from "./global";
 interface CustomElementConstructor<Instance extends CustomElementInterface> {
 	new (_: GlobalCustomElement): Instance;
 
-	dyn_attributes?: Array<string>;
+	/**
+	 * Attributs dynamiques (observedAttributes)
+	 */
+	dynamic_attributes?: Array<string>;
+
+	/**
+	 * Événements autorisés
+	 */
 	events?: Array<string>;
+
+	/**
+	 * Nom de la balise du custom element.
+	 */
 	TAG_NAME?: string;
 }
 
