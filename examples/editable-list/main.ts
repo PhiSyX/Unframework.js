@@ -92,16 +92,6 @@ export class EditableList {
 			}),
 			div(
 				style({
-					"div > div": {
-						display: "flex",
-						alignItems: "center",
-						gap: "10px",
-					},
-
-					input: {
-						flexGrow: "1",
-					},
-
 					".icon": {
 						border: "none",
 						borderRadius: "8px",
@@ -111,12 +101,24 @@ export class EditableList {
 					},
 				}),
 				label(this.add_item_text),
-				input({ type: "text" }).model(this.model),
+				input({ type: "text" })
+					.style({
+						flexGrow: "1",
+					})
+					.model(this.model),
 				button("&oplus;")
 					.classes("icon")
 					.on("click", this.add_list_item)
 			)
-		).classes("editable-list");
+		)
+			.css({
+				"div > div": {
+					display: "flex",
+					alignItems: "center",
+					gap: "10px",
+				},
+			})
+			.classes("editable-list");
 	}
 
 	handleUpdateListEvent = (evt: CustomEvent<{ items: Array<string> }>) => {

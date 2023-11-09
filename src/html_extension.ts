@@ -8,8 +8,8 @@ import {
 	is_object,
 	is_primitive,
 } from "~/helpers/lang";
-import { Computed, Signal, is_computed, is_signal } from "./signal";
 import { kebabize, simple_uuid } from "~/helpers/string";
+import { Computed, Signal, is_computed, is_signal } from "./signal";
 
 // ---- //
 // Type //
@@ -308,17 +308,18 @@ class HTMLExtension<
 
 	handle_object_style(style_obj: HTMLExtension.HTMLStyle) {
 		for (let [property, value] of Object.entries(style_obj)) {
+			let property_k = kebabize(property.toString());
 			if (is_computed(value)) {
 				let set_property_fn = (data: ToString) => {
 					this.$native_element.style.setProperty(
-						property.toString(),
+						property_k,
 						data.toString()
 					);
 				};
 				value.watch(set_property_fn, { immediate: true });
 			} else {
 				this.$native_element.style.setProperty(
-					property.toString(),
+					property_k,
 					value!.toString()
 				);
 			}
