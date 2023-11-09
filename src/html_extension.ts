@@ -63,8 +63,14 @@ namespace HTMLExtension {
 
 	// EXAMPLE: T as "click" => `(evt: MouseEvent): void`
 	// EXAMPLE: T as "custom" => `(evt: CustomEvent): void`
-	export type ChooseGoodEvent<K> = K extends keyof HTMLElementEventMap
-		? (this: HTMLExtension, evt: HTMLElementEventMap[K]) => void
+	export type ChooseGoodEvent<
+		T extends EventTarget,
+		K
+	> = K extends keyof HTMLElementEventMap
+		? (
+				this: HTMLExtension,
+				evt: TargetedEvent<T, HTMLElementEventMap[K]>
+		  ) => void
 		: (this: HTMLExtension, evt: CustomEvent) => void;
 }
 
@@ -474,17 +480,17 @@ class HTMLExtension<
 
 	off<K extends keyof HTMLElementEventMap>(
 		type: K,
-		listener: HTMLExtension.ChooseGoodEvent<K>,
+		listener: HTMLExtension.ChooseGoodEvent<NativeHTMLElement, K>,
 		options?: boolean | AddEventListenerOptions
 	): this;
 	off<K>(
 		type: K,
-		listener: HTMLExtension.ChooseGoodEvent<K>,
+		listener: HTMLExtension.ChooseGoodEvent<NativeHTMLElement, K>,
 		options?: boolean | AddEventListenerOptions
 	): this;
 	off(
 		type: any,
-		listener: HTMLExtension.ChooseGoodEvent<any>,
+		listener: HTMLExtension.ChooseGoodEvent<NativeHTMLElement, any>,
 		options?: boolean | AddEventListenerOptions
 	): this {
 		this.#native_element.removeEventListener(
@@ -497,17 +503,17 @@ class HTMLExtension<
 
 	on<K extends keyof HTMLElementEventMap>(
 		type: K,
-		listener: HTMLExtension.ChooseGoodEvent<K>,
+		listener: HTMLExtension.ChooseGoodEvent<NativeHTMLElement, K>,
 		options?: boolean | AddEventListenerOptions
 	): this;
 	on<K>(
 		type: K,
-		listener: HTMLExtension.ChooseGoodEvent<K>,
+		listener: HTMLExtension.ChooseGoodEvent<NativeHTMLElement, K>,
 		options?: boolean | AddEventListenerOptions
 	): this;
 	on(
 		type: any,
-		listener: HTMLExtension.ChooseGoodEvent<any>,
+		listener: HTMLExtension.ChooseGoodEvent<NativeHTMLElement, any>,
 		options?: boolean | AddEventListenerOptions
 	): this {
 		this.#native_element.addEventListener(
