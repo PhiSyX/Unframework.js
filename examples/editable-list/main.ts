@@ -14,7 +14,7 @@ import { signal } from "~/signal";
 
 @customElement({ mode: "open", tagName: "editable-ul-list" })
 export class EditableUList {
-	static dyn_attributes = ["items"];
+	static dynamic_attributes = ["items"];
 
 	items: Array<string> = [];
 
@@ -82,7 +82,7 @@ export class EditableList {
 		});
 	}
 
-	render(): HTMLExtension {
+	render(): HTMLExtension<HTMLDivElement> {
 		return div(
 			h3(this.title),
 			use(EditableUList, {

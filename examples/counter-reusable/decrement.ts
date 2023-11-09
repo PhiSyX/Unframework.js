@@ -9,9 +9,9 @@ export class DecrementCounterButton {
 	/**
 	 * Attributes
 	 */
-	static dyn_attributes = ["step"];
+	static dynamic_attributes = ["step"];
 
-	step = signal(1, Number);
+	step = signal(1, { parser: Number });
 
 	constructor(public customElement: GlobalCustomElement) {}
 

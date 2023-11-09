@@ -28,7 +28,7 @@ export class EditWord {
 		this.model.replace(text);
 	}
 
-	render(): HTMLExtension {
+	render(): HTMLExtension<HTMLDivElement> {
 		return div(
 			style({
 				span: {
@@ -56,11 +56,16 @@ export class EditWord {
 						this.model.replace($el.value());
 					})
 					.on("blur", this.update_display)
-			).style({
-				display: this.editable.computed((editable) => {
-					return editable ? "inline-block" : "none";
+			)
+				.style({
+					display: this.editable.computed((editable) => {
+						return editable ? "inline-block" : "none";
+					}),
+				})
+				.on("submit", (evt) => {
+					evt.preventDefault();
+					this.update_display();
 				}),
-			}),
 			span(this.model)
 				.when(this.editable, false, ($el) => {
 					this.span_width.replace($el.node().clientWidth);

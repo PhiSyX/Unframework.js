@@ -13,9 +13,9 @@ export class AppCounter {
 	/**
 	 * Attributes
 	 */
-	static dyn_attributes = ["step"];
+	static dynamic_attributes = ["step"];
 
-	step = signal(1, Number);
+	step = signal(1, { parser: Number });
 
 	@attr({ parser: Number })
 	get base(): number {
