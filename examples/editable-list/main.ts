@@ -22,37 +22,38 @@ export class EditableUList {
 
 	render(): HTMLExtension<HTMLDivElement> {
 		return div(
-			style({
-				li: {
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "space-between",
-				},
-
-				".icon": {
-					backgroundColor: "#fff",
-					border: "none",
-					cursor: "pointer",
-					float: "right",
-					fontSize: "1.8rem",
-				},
-			}),
 			ul(this.items, (item) => {
 				return li(
 					item,
 					button("&ominus;")
 						.classes("icon")
-						.on("click", () => {
-							this.customElement.emit("update-list", {
-								items: this.items.filter((it) => {
-									return it != item;
-								}),
-							});
-						})
+						.on("click", () => this.update_item(item))
 				);
 			})
-		);
+		).css({
+			li: {
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+			},
+
+			".icon": {
+				backgroundColor: "#fff",
+				border: "none",
+				cursor: "pointer",
+				float: "right",
+				fontSize: "1.8rem",
+			},
+		});
 	}
+
+	update_item = (item: string) => {
+		this.customElement.emit("update-list", {
+			items: this.items.filter((it) => {
+				return it != item;
+			}),
+		});
+	};
 }
 
 @customElement({ mode: "open" })
@@ -75,21 +76,17 @@ export class EditableList {
 	}
 
 	mounted() {
-		Array.from(this.customElement.attributes).forEach((attr) => {
-			if (attr.name.includes("list-item")) {
+		Array.from(this.customElement.attributes)
+			.filter((attr) => attr.name.includes("list-item"))
+			.forEach((attr) => {
 				this.items.replace((attrs) => [...attrs, attr.value]);
-			}
-		});
+			});
 	}
 
 	render(): HTMLExtension<HTMLDivElement> {
 		return div(
 			h3(this.title),
-			use(EditableUList, {
-				items: this.items.computed((attrs) => {
-					return attrs;
-				}),
-			}),
+			use(EditableUList, { items: this.items }),
 			div(
 				style({
 					".icon": {
@@ -105,7 +102,13 @@ export class EditableList {
 					.style({
 						flexGrow: "1",
 					})
-					.model(this.model),
+					.model(this.model)
+					.on("keydown", (evt) => {
+						if (evt.key == "Enter") {
+							this.add_list_item(evt);
+						}
+					})
+					.autofocus(),
 				button("&oplus;")
 					.classes("icon")
 					.on("click", this.add_list_item)
@@ -125,8 +128,12 @@ export class EditableList {
 		this.items.replace(evt.detail.items);
 	};
 
-	add_list_item = (_: MouseEvent) => {
-		this.items.replace((items) => [...items, this.model.valueOf()]);
+	add_list_item = (_: MouseEvent | KeyboardEvent) => {
+		let model = this.model.valueOf().trim();
+		if (model.length === 0) {
+			return;
+		}
+		this.items.replace((items) => [...items, model]);
 		this.model.replace("");
 	};
 }
